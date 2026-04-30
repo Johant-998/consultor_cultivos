@@ -1,379 +1,339 @@
 import streamlit as st
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
+import math
 
-# ─── Page config ────────────────────────────────────────────────────────────────
+# ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="AgroSentinel · Consulta Agrícola",
-    page_icon="🌿",
-    layout="wide",
-    initial_sidebar_state="expanded",
+    page_title="ThermoScale · Celsius → Kelvin",
+    page_icon="🌡️",
+    layout="centered",
 )
 
-# ─── Custom CSS ─────────────────────────────────────────────────────────────────
+# ── Custom CSS ─────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;600;800&display=swap');
 
-/* Base */
-html, body, [class*="css"] {
-    font-family: 'DM Sans', sans-serif;
+/* ── Root & body ── */
+html, body, [data-testid="stAppViewContainer"] {
+    background: #05050f !important;
 }
+[data-testid="stAppViewContainer"] {
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, #0d1a3a 0%, #05050f 70%) !important;
+}
+[data-testid="stHeader"] { background: transparent !important; }
+[data-testid="stToolbar"] { display: none; }
+section.main > div { padding-top: 2rem !important; }
 
-/* Background */
-.stApp {
-    background-color: #0d1f0f;
-    background-image:
-        radial-gradient(ellipse at 20% 10%, rgba(52, 111, 47, 0.18) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 90%, rgba(180, 210, 80, 0.08) 0%, transparent 50%);
-}
+/* ── Typography base ── */
+* { font-family: 'Outfit', sans-serif; }
+h1, h2, h3 { font-family: 'Outfit', sans-serif; }
 
-/* Sidebar */
-section[data-testid="stSidebar"] {
-    background-color: #111f10;
-    border-right: 1px solid rgba(180, 210, 80, 0.15);
+/* ── Hero label ── */
+.hero-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    color: #4b8eff;
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
 }
-section[data-testid="stSidebar"] * {
-    color: #c8dfa0 !important;
-}
-
-/* Header hero */
-.hero-title {
-    font-family: 'DM Serif Display', serif;
-    font-size: 3.2rem;
+/* ── Main title ── */
+.main-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 2.6rem;
+    font-weight: 800;
+    color: #e8f0ff;
     line-height: 1.1;
-    color: #e8f5c0;
-    letter-spacing: -0.5px;
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.15rem;
 }
-.hero-subtitle {
-    font-size: 1rem;
-    color: #7aac5a;
-    font-weight: 300;
+.main-title span { color: #4b8eff; }
+
+/* ── Subtitle ── */
+.subtitle {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: #3d5a99;
+    letter-spacing: 0.08em;
+    margin-bottom: 2.2rem;
+}
+
+/* ── Card container ── */
+.card {
+    background: linear-gradient(145deg, #0c1528 0%, #080e1f 100%);
+    border: 1px solid #1a2d5a;
+    border-radius: 20px;
+    padding: 2rem 2.2rem 1.8rem;
+    box-shadow: 0 0 60px rgba(75, 142, 255, 0.07), 0 20px 40px rgba(0,0,0,0.5);
+    margin-bottom: 1.2rem;
+}
+
+/* ── Input label override ── */
+[data-testid="stNumberInput"] label,
+[data-testid="stSlider"] label {
+    font-family: 'Space Mono', monospace !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.18em !important;
+    color: #3d6ec7 !important;
+    text-transform: uppercase !important;
+}
+
+/* ── Number input ── */
+[data-testid="stNumberInput"] input {
+    background: #0a1020 !important;
+    border: 1.5px solid #1e3566 !important;
+    border-radius: 10px !important;
+    color: #c8dcff !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: 1.35rem !important;
+    text-align: center !important;
+    padding: 0.6rem 0.8rem !important;
+}
+[data-testid="stNumberInput"] input:focus {
+    border-color: #4b8eff !important;
+    box-shadow: 0 0 0 3px rgba(75, 142, 255, 0.15) !important;
+}
+
+/* ── Slider ── */
+[data-testid="stSlider"] .stSlider > div > div > div {
+    background: #1a2d5a !important;
+}
+[data-testid="stSlider"] .stSlider > div > div > div > div {
+    background: linear-gradient(90deg, #1a3a8c, #4b8eff) !important;
+}
+
+/* ── Result box ── */
+.result-box {
+    background: linear-gradient(135deg, #071630 0%, #0a1f4a 50%, #071630 100%);
+    border: 1px solid #2a4a8a;
+    border-radius: 16px;
+    padding: 1.6rem 1.8rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    margin: 1rem 0;
+}
+.result-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #4b8eff, transparent);
+}
+.result-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 3rem;
+    font-weight: 700;
+    color: #4b8eff;
+    line-height: 1;
+    margin-bottom: 0.2rem;
+    text-shadow: 0 0 30px rgba(75, 142, 255, 0.4);
+}
+.result-unit {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.22em;
+    color: #3d6ec7;
+    text-transform: uppercase;
+}
+.result-formula {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: #1e3a6e;
+    margin-top: 0.9rem;
+    letter-spacing: 0.06em;
+}
+
+/* ── Phase badge ── */
+.phase-badge {
+    display: inline-block;
+    padding: 0.28rem 0.9rem;
+    border-radius: 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    margin-bottom: 2rem;
+    font-weight: 700;
+    margin-top: 0.8rem;
 }
+.phase-solid   { background: #0d2545; color: #4b8eff; border: 1px solid #1e3d7a; }
+.phase-liquid  { background: #0d3040; color: #42c5f5; border: 1px solid #1e5a7a; }
+.phase-gas     { background: #3d0d10; color: #ff6b6b; border: 1px solid #7a1e24; }
+.phase-plasma  { background: #3d1f00; color: #ffaa33; border: 1px solid #7a4200; }
 
-/* KPI cards */
-.kpi-card {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(180, 210, 80, 0.2);
-    border-radius: 12px;
-    padding: 1.2rem 1.5rem;
+/* ── Fact row ── */
+.fact-row {
+    display: flex;
+    gap: 0.7rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+.fact-chip {
+    flex: 1;
+    min-width: 120px;
+    background: #08111f;
+    border: 1px solid #111e35;
+    border-radius: 10px;
+    padding: 0.7rem 0.8rem;
     text-align: center;
-    transition: border-color 0.2s;
 }
-.kpi-card:hover { border-color: rgba(180, 210, 80, 0.5); }
-.kpi-value {
-    font-family: 'DM Serif Display', serif;
-    font-size: 2.2rem;
-    color: #b4d250;
-    line-height: 1;
-}
-.kpi-label {
-    font-size: 0.75rem;
-    color: #7aac5a;
+.fact-chip-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.16em;
+    color: #274475;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-top: 0.4rem;
+    margin-bottom: 0.3rem;
+}
+.fact-chip-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.88rem;
+    color: #7aadff;
+    font-weight: 700;
 }
 
-/* Section divider */
-.section-label {
-    font-size: 0.7rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: #4a7a3a;
-    border-bottom: 1px solid rgba(180,210,80,0.12);
-    padding-bottom: 0.5rem;
-    margin: 1.5rem 0 1rem;
+/* ── Divider ── */
+.divider {
+    border: none;
+    border-top: 1px solid #0f1e38;
+    margin: 1.5rem 0;
 }
 
-/* Selectbox / inputs */
-.stSelectbox label, .stFileUploader label {
-    color: #c8dfa0 !important;
-    font-size: 0.85rem !important;
+/* ── Footer ── */
+.footer {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    color: #1a2d50;
+    text-align: center;
+    margin-top: 2rem;
 }
-
-/* Dataframe */
-.stDataFrame {
-    border: 1px solid rgba(180, 210, 80, 0.15) !important;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-/* Alert */
-.stAlert {
-    background: rgba(180, 210, 80, 0.08) !important;
-    border: 1px solid rgba(180, 210, 80, 0.3) !important;
-    color: #c8dfa0 !important;
-    border-radius: 8px !important;
-}
-
-/* Plotly chart backgrounds */
-.js-plotly-plot {
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-/* Hide Streamlit branding */
-#MainMenu, footer { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Chart theme ────────────────────────────────────────────────────────────────
-CHART_BG     = "rgba(0,0,0,0)"
-CHART_PAPER  = "rgba(0,0,0,0)"
-GRID_COLOR   = "rgba(180,210,80,0.08)"
-FONT_COLOR   = "#c8dfa0"
-ACCENT       = "#b4d250"
-PALETTE      = ["#b4d250", "#7aac5a", "#4a7a3a", "#2f5426", "#e8f5c0", "#346f2f"]
 
-def apply_chart_theme(fig):
-    fig.update_layout(
-        paper_bgcolor=CHART_PAPER,
-        plot_bgcolor=CHART_BG,
-        font_color=FONT_COLOR,
-        font_family="DM Sans",
-        margin=dict(l=20, r=20, t=40, b=20),
-        legend=dict(
-            bgcolor="rgba(0,0,0,0.3)",
-            bordercolor="rgba(180,210,80,0.2)",
-            borderwidth=1,
-        ),
-    )
-    fig.update_xaxes(gridcolor=GRID_COLOR, showgrid=True, zeroline=False)
-    fig.update_yaxes(gridcolor=GRID_COLOR, showgrid=True, zeroline=False)
-    return fig
+# ── Helpers ────────────────────────────────────────────────────────────────────
+ABSOLUTE_ZERO = -273.15
 
-# ─── Load data ──────────────────────────────────────────────────────────────────
-@st.cache_data
-def load_data(uploaded_file):
-    df = pd.read_excel(uploaded_file, engine="openpyxl")
-    # Normalise column names (strip whitespace)
-    df.columns = df.columns.str.strip()
-    return df
+def celsius_to_kelvin(c: float) -> float:
+    return c - ABSOLUTE_ZERO
 
-METRIC_COLS = ['Área sembrada (ha)', 'Área cosechada (ha)', 'Producción (t)']
-DETAIL_COLS = ['Año', 'Municipio', 'Cultivo',
-               'Área sembrada (ha)', 'Área cosechada (ha)',
-               'Producción (t)', 'Rendimiento (t/ha)']
+def get_phase(kelvin: float):
+    """Return (label, css_class, emoji) for water's state at this temperature."""
+    if kelvin < 273.15:
+        return "Hielo · Sólido", "phase-solid", "🧊"
+    elif kelvin < 373.15:
+        return "Agua · Líquido", "phase-liquid", "💧"
+    elif kelvin < 5000:
+        return "Vapor · Gas", "phase-gas", "♨️"
+    else:
+        return "Plasma", "phase-plasma", "⚡"
 
-# ─── Sidebar ────────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("""
-    <div style='padding: 1rem 0 1.5rem;'>
-        <div style='font-family: DM Serif Display, serif; font-size:1.5rem; color:#e8f5c0;'>🌿 AgroSentinel</div>
-        <div style='font-size:0.7rem; color:#4a7a3a; letter-spacing:0.2em; text-transform:uppercase; margin-top:4px;'>
-            Desempeño Agrícola · 2019–2024
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+def celsius_to_fahrenheit(c: float) -> float:
+    return c * 9/5 + 32
 
-    st.markdown('<div class="section-label">📂 Fuente de datos</div>', unsafe_allow_html=True)
-    uploaded_file = st.file_uploader(
-        "Carga el archivo Excel",
-        type=["xlsx"],
-        help="Archivo: 20250617_BaseAgricola20192024.xlsx"
+def celsius_to_rankine(c: float) -> float:
+    return (c + 273.15) * 9/5
+
+
+# ── UI ─────────────────────────────────────────────────────────────────────────
+st.markdown('<p class="hero-label">· Conversor de Temperatura ·</p>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-title">Thermo<span>Scale</span></h1>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Celsius  →  Kelvin  ·  Escala Absoluta</p>', unsafe_allow_html=True)
+
+# ── Input card ──
+st.markdown('<div class="card">', unsafe_allow_html=True)
+
+col_in, col_sl = st.columns([1, 2], gap="large")
+
+with col_in:
+    celsius = st.number_input(
+        "Temperatura (°C)",
+        min_value=-273.15,
+        max_value=1_000_000.0,
+        value=25.0,
+        step=0.01,
+        format="%.2f",
+        help="Mínimo: −273.15 °C (cero absoluto)",
     )
 
-    if uploaded_file:
-        df_raw = load_data(uploaded_file)
+with col_sl:
+    celsius_slider = st.slider(
+        "Rango rápido",
+        min_value=-273.15,
+        max_value=500.0,
+        value=float(celsius),
+        step=0.5,
+        label_visibility="visible",
+    )
+    # Keep slider & input in sync (slider wins if moved)
+    if celsius_slider != celsius:
+        celsius = celsius_slider
 
-        st.markdown('<div class="section-label">🔍 Filtros</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
-        departamentos = sorted(df_raw['Departamento'].dropna().unique().tolist())
-        depto_sel = st.selectbox("Departamento", departamentos)
+# ── Calculation ──
+kelvin = celsius_to_kelvin(celsius)
+phase_label, phase_class, phase_emoji = get_phase(kelvin)
+fahrenheit = celsius_to_fahrenheit(celsius)
+rankine = celsius_to_rankine(celsius)
 
-        cultivos_disponibles = sorted(
-            df_raw[df_raw['Departamento'] == depto_sel]['Cultivo'].dropna().unique().tolist()
-        )
-        cultivo_sel = st.selectbox("Cultivo", cultivos_disponibles)
-
-        st.markdown('<div class="section-label">📊 Vista</div>', unsafe_allow_html=True)
-        mostrar_tabla_detalle = st.checkbox("Mostrar detalle municipal", value=False)
-
-# ─── Main content ───────────────────────────────────────────────────────────────
-if not uploaded_file:
-    # Landing / empty state
-    st.markdown("""
-    <div style='text-align:center; padding: 5rem 2rem;'>
-        <div class='hero-title'>Consulta de<br>Desempeño Agrícola</div>
-        <div class='hero-subtitle'>Colombia · 2019 – 2024</div>
-        <p style='color:#4a7a3a; max-width:480px; margin:0 auto; font-size:0.95rem; line-height:1.7;'>
-            Carga el archivo Excel en el panel izquierdo para explorar área sembrada, 
-            área cosechada, producción y rendimiento por departamento y cultivo.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    st.stop()
-
-# ─── Filter data ────────────────────────────────────────────────────────────────
-df_filtrado = df_raw[
-    (df_raw['Departamento'].str.contains(depto_sel, case=False, na=False)) &
-    (df_raw['Cultivo'].str.contains(cultivo_sel, case=False, na=False))
-].copy()
-
-# Coerce metrics to numeric
-for col in METRIC_COLS:
-    if col in df_filtrado.columns:
-        df_filtrado[col] = pd.to_numeric(df_filtrado[col], errors='coerce')
-
-if 'Rendimiento (t/ha)' in df_filtrado.columns:
-    df_filtrado['Rendimiento (t/ha)'] = pd.to_numeric(df_filtrado['Rendimiento (t/ha)'], errors='coerce')
-
-# ─── Hero ───────────────────────────────────────────────────────────────────────
+# ── Result card ──
 st.markdown(f"""
-<div style='padding: 1.5rem 0 0.5rem;'>
-    <div class='hero-subtitle'>Resultados · {depto_sel}</div>
-    <div class='hero-title'>{cultivo_sel}</div>
+<div class="result-box">
+    <div class="result-value">{kelvin:,.4f}</div>
+    <div class="result-unit">Kelvin (K)</div>
+    <div class="result-formula">K = °C + 273.15 &nbsp;·&nbsp; {celsius:.2f} + 273.15 = {kelvin:.4f}</div>
+    <div><span class="phase-badge {phase_class}">{phase_emoji} {phase_label} (H₂O)</span></div>
 </div>
 """, unsafe_allow_html=True)
 
-if df_filtrado.empty:
-    st.warning("No se encontraron registros para la combinación seleccionada.")
-    st.stop()
-
-# ─── KPI Cards ──────────────────────────────────────────────────────────────────
-total_sembrada   = df_filtrado['Área sembrada (ha)'].sum()   if 'Área sembrada (ha)'   in df_filtrado.columns else 0
-total_cosechada  = df_filtrado['Área cosechada (ha)'].sum()  if 'Área cosechada (ha)'  in df_filtrado.columns else 0
-total_produccion = df_filtrado['Producción (t)'].sum()       if 'Producción (t)'       in df_filtrado.columns else 0
-rendimiento_prom = df_filtrado['Rendimiento (t/ha)'].mean()  if 'Rendimiento (t/ha)'  in df_filtrado.columns else None
-registros        = len(df_filtrado)
-
-def fmt(n):
-    if n >= 1_000_000:
-        return f"{n/1_000_000:.1f}M"
-    if n >= 1_000:
-        return f"{n/1_000:.1f}K"
-    return f"{n:,.0f}"
-
-cols = st.columns(4)
-kpis = [
-    (fmt(total_sembrada),    "ha Sembradas"),
-    (fmt(total_cosechada),   "ha Cosechadas"),
-    (fmt(total_produccion),  "Toneladas Prod."),
-    (f"{rendimiento_prom:.1f} t/ha" if rendimiento_prom else "—", "Rendimiento Prom."),
-]
-for col, (val, label) in zip(cols, kpis):
-    with col:
-        st.markdown(f"""
-        <div class='kpi-card'>
-            <div class='kpi-value'>{val}</div>
-            <div class='kpi-label'>{label}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
-
-# ─── Annual summary ─────────────────────────────────────────────────────────────
-if 'Año' in df_filtrado.columns:
-    resumen_anual = df_filtrado.groupby('Año')[
-        [c for c in METRIC_COLS if c in df_filtrado.columns]
-    ].sum().reset_index()
-
-    # ── Charts row ──────────────────────────────────────────────────────────────
-    col_left, col_right = st.columns([3, 2], gap="large")
-
-    with col_left:
-        st.markdown('<div class="section-label">📈 Producción por año</div>', unsafe_allow_html=True)
-        if 'Producción (t)' in resumen_anual.columns:
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=resumen_anual['Año'],
-                y=resumen_anual['Producción (t)'],
-                marker_color=ACCENT,
-                marker_line_width=0,
-                name="Producción (t)",
-                hovertemplate="<b>%{x}</b><br>%{y:,.0f} t<extra></extra>",
-            ))
-            if 'Rendimiento (t/ha)' in df_filtrado.columns:
-                rend_anual = df_filtrado.groupby('Año')['Rendimiento (t/ha)'].mean().reset_index()
-                fig.add_trace(go.Scatter(
-                    x=rend_anual['Año'],
-                    y=rend_anual['Rendimiento (t/ha)'],
-                    mode='lines+markers',
-                    name='Rendimiento (t/ha)',
-                    yaxis='y2',
-                    line=dict(color='#e8f5c0', width=2),
-                    marker=dict(size=6),
-                    hovertemplate="<b>%{x}</b><br>%{y:.2f} t/ha<extra></extra>",
-                ))
-                fig.update_layout(
-                    yaxis2=dict(
-                        overlaying='y', side='right',
-                        showgrid=False,
-                        title='Rendimiento (t/ha)',
-                        title_font_color=FONT_COLOR,
-                    )
-                )
-            fig.update_layout(
-                xaxis_title="Año",
-                yaxis_title="Producción (t)",
-                barmode='group',
-                showlegend=True,
-            )
-            apply_chart_theme(fig)
-            st.plotly_chart(fig, use_container_width=True)
-
-    with col_right:
-        st.markdown('<div class="section-label">🌾 Área: Sembrada vs Cosechada</div>', unsafe_allow_html=True)
-        area_cols = [c for c in ['Área sembrada (ha)', 'Área cosechada (ha)'] if c in resumen_anual.columns]
-        if area_cols:
-            fig2 = go.Figure()
-            colors_area = [ACCENT, "#4a7a3a"]
-            for i, col_name in enumerate(area_cols):
-                fig2.add_trace(go.Scatter(
-                    x=resumen_anual['Año'],
-                    y=resumen_anual[col_name],
-                    mode='lines+markers',
-                    name=col_name,
-                    line=dict(color=colors_area[i], width=2.5),
-                    marker=dict(size=7),
-                    fill='tozeroy' if i == 0 else 'tonexty',
-                    fillcolor=f"rgba(180,210,80,{0.15 - i*0.07})",
-                    hovertemplate=f"<b>%{{x}}</b><br>%{{y:,.0f}} ha<extra>{col_name}</extra>",
-                ))
-            fig2.update_layout(xaxis_title="Año", yaxis_title="Área (ha)", showlegend=True)
-            apply_chart_theme(fig2)
-            st.plotly_chart(fig2, use_container_width=True)
-
-    # ── Annual summary table ─────────────────────────────────────────────────────
-    st.markdown('<div class="section-label">📋 Resumen departamental por año</div>', unsafe_allow_html=True)
-    st.dataframe(
-        resumen_anual.style.format({c: "{:,.0f}" for c in resumen_anual.columns if c != 'Año'}),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-# ─── Municipal detail ────────────────────────────────────────────────────────────
-if mostrar_tabla_detalle:
-    st.markdown('<div class="section-label">🏘 Detalle a nivel municipal</div>', unsafe_allow_html=True)
-    cols_presentes = [c for c in DETAIL_COLS if c in df_filtrado.columns]
-    fmt_dict = {c: "{:,.0f}" for c in cols_presentes if c not in ['Año', 'Municipio', 'Cultivo', 'Rendimiento (t/ha)']}
-    if 'Rendimiento (t/ha)' in cols_presentes:
-        fmt_dict['Rendimiento (t/ha)'] = "{:.2f}"
-    st.dataframe(
-        df_filtrado[cols_presentes].sort_values(['Año', 'Municipio']).style.format(fmt_dict),
-        use_container_width=True,
-        hide_index=True,
-        height=400,
-    )
-
-    # Download button
-    csv = df_filtrado[cols_presentes].to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="⬇ Descargar datos filtrados (.csv)",
-        data=csv,
-        file_name=f"agrosentinel_{depto_sel}_{cultivo_sel}.csv",
-        mime="text/csv",
-    )
-
-# ─── Footer ─────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div style='text-align:center; padding:3rem 0 1rem; color:#2f5426; font-size:0.75rem; letter-spacing:0.1em;'>
-    AGROSENTINEL · DESEMPEÑO AGRÍCOLA COLOMBIA 2019–2024
+# ── Conversions row ──
+st.markdown(f"""
+<div class="fact-row">
+    <div class="fact-chip">
+        <div class="fact-chip-label">Celsius</div>
+        <div class="fact-chip-value">{celsius:.2f} °C</div>
+    </div>
+    <div class="fact-chip">
+        <div class="fact-chip-label">Kelvin</div>
+        <div class="fact-chip-value">{kelvin:.4f} K</div>
+    </div>
+    <div class="fact-chip">
+        <div class="fact-chip-label">Fahrenheit</div>
+        <div class="fact-chip-value">{fahrenheit:.2f} °F</div>
+    </div>
+    <div class="fact-chip">
+        <div class="fact-chip-label">Rankine</div>
+        <div class="fact-chip-value">{rankine:.4f} °R</div>
+    </div>
 </div>
+""", unsafe_allow_html=True)
+
+# ── Reference expander ──
+st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+with st.expander("📐 Referencias de temperatura"):
+    refs = {
+        "Cero absoluto": -273.15,
+        "Nitrógeno líquido": -195.79,
+        "Hielo (0 °C)": 0.0,
+        "Cuerpo humano": 37.0,
+        "Agua hirviendo": 100.0,
+        "Superficie del Sol": 5505.0,
+    }
+    for label, c_val in refs.items():
+        k_val = celsius_to_kelvin(c_val)
+        st.markdown(
+            f"<span style='font-family:Space Mono,monospace;font-size:0.78rem;"
+            f"color:#3d6ec7;letter-spacing:0.1em;'>{label}</span>"
+            f"<span style='font-family:Space Mono,monospace;font-size:0.78rem;"
+            f"color:#7aadff;float:right;'>{c_val} °C → {k_val:.2f} K</span><br>",
+            unsafe_allow_html=True,
+        )
+
+# ── Footer ──
+st.markdown("""
+<p class="footer">
+  K = °C + 273.15 &nbsp;·&nbsp; Escala Kelvin definida por William Thomson (Lord Kelvin) · 1848
+</p>
 """, unsafe_allow_html=True)
